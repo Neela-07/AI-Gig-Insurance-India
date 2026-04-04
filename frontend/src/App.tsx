@@ -17,14 +17,19 @@ import MyInsurance from './pages/MyInsurance'
 import Settings from './pages/Settings'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import ClaimsHistory from './pages/ClaimsHistory'
+import Payments from './pages/Payments'
 import { authService, type User } from './services/auth'
+
 const pageComponents: Record<string, React.ComponentType> = {
   dashboard: WorkerDashboard,
   insurance: MyInsurance,
   claims: Claims,
+  history: ClaimsHistory,
+  payments: Payments,
   risk: RiskMonitor,
   calculator: PremiumCalculator,
-  alerts: RiskMonitor,       // re-uses risk monitor for alerts
+  alerts: RiskMonitor,
   reports: AdminDashboard,
   settings: Settings,
   admin: AdminDashboard,
@@ -37,12 +42,21 @@ function App() {
   const [user, setUser] = useState<User | null>(authService.getCurrentUser())
   const [isAuthenticated, setIsAuthenticated] = useState(authService.isAuthenticated())
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
+  const [activePlanName, setActivePlanName] = useState<string | undefined>(undefined)
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      setUser(null)
-    }
+    if (!isAuthenticated) setUser(null)
   }, [isAuthenticated])
+
+  // Fetch active plan for Sidebar display
+  useEffect(() => {
+    if (!user) return
+    import('./services/api').then(({ getPolicy }) => {
+      getPolicy(user.id)
+        .then(res => setActivePlanName(res.data?.policy?.plan_name))
+        .catch(() => {})
+    })
+  }, [user?.id])
 
   const handleLoginSuccess = (userData: User) => {
     setUser(userData)
@@ -62,14 +76,14 @@ function App() {
         <AnimatePresence mode="wait">
           {authMode === 'login' ? (
             <motion.div key="login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <Login 
-                onLoginSuccess={handleLoginSuccess} 
-                onNavigateToRegister={() => setAuthMode('register')} 
+              <Login
+                onLoginSuccess={handleLoginSuccess}
+                onNavigateToRegister={() => setAuthMode('register')}
               />
             </motion.div>
           ) : (
             <motion.div key="register" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <Register 
+              <Register
                 onRegisterSuccess={handleLoginSuccess}
                 onNavigateToLogin={() => setAuthMode('login')}
               />
@@ -89,7 +103,13 @@ function App() {
     <ThemeProvider>
       <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg)' }}>
         {/* Sidebar — desktop */}
-        <Sidebar activePage={activePage} onNavigate={setActivePage} isAdmin={isAdmin} />
+        <Sidebar
+          activePage={activePage}
+          onNavigate={setActivePage}
+          isAdmin={isAdmin}
+          userName={user?.name}
+          userPlan={activePlanName}
+        />
 
         {/* Main area */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">

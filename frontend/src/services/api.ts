@@ -3,7 +3,7 @@ import axios from 'axios'
 const API = axios.create({
   baseURL: '/api',
   headers: { 'Content-Type': 'application/json' },
-  timeout: 10000,
+  timeout: 12000,
 })
 
 // ─── Risk ────────────────────────────────────────────────────────────────────
@@ -56,6 +56,9 @@ export const buyPolicy = (data: {
   coverage_per_day?: number
   max_days?: number
 }) => API.post('/premium/buy', data)
+
+export const getPayments = (worker_id: string) =>
+  API.get(`/premium/payments?worker_id=${worker_id}`)
 
 // ─── Claims ──────────────────────────────────────────────────────────────────
 export const triggerClaim = (data: {

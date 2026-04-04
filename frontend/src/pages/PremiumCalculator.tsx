@@ -64,21 +64,27 @@ export default function InsuranceRecommendation() {
   const locationRef = useRef<UserLocation | null>(null)
 
   const fetchScore = useCallback(async (loc: UserLocation) => {
-    if (!user) return
+    if (!user) { setLoading(false); return }
     try {
-      const [{ data: policyData }, { data: snapData }] = await Promise.all([
+      const [policyResult, snapResult] = await Promise.allSettled([
         getPolicy(user.id).catch(() => ({ data: { policy: null } })),
-        getRiskSnapshot(user.id, { lat: loc.lat, lon: loc.lon, city: loc.city })
+        getRiskSnapshot(user.id, { lat: loc.lat, lon: loc.lon, city: loc.city }),
       ])
-      
-      if (policyData.policy?.plan_name) setActivePlan(policyData.policy.plan_name)
-      if (snapData) setSafetyScore(snapData.safety_score)
+
+      if (policyResult.status === 'fulfilled' && policyResult.value.data?.policy?.plan_name) {
+        setActivePlan(policyResult.value.data.policy.plan_name)
+      }
+      if (snapResult.status === 'fulfilled' && snapResult.value.data) {
+        setSafetyScore(snapResult.value.data.safety_score)
+      }
     } catch (e) {
       console.error('Fetch error', e)
+      // Fallback: use default score so page doesn't stay blank
+      setSafetyScore(75)
     } finally {
       setLoading(false)
     }
-  }, [user])
+  }, [user?.id])
 
   useEffect(() => {
     const init = async () => {

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard, Shield, FileText, Activity, Sparkles,
   Bell, BarChart3, Settings, LogOut, ChevronLeft, ChevronRight,
-  Zap, User
+  Zap, History, CreditCard
 } from 'lucide-react'
 
 interface NavItem {
@@ -14,23 +14,27 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'insurance', label: 'My Insurance', icon: Shield },
-  { id: 'claims', label: 'Claims', icon: FileText, badge: 2 },
-  { id: 'risk', label: 'Risk Monitor', icon: Activity },
-  { id: 'calculator', label: 'Recommend', icon: Sparkles },
-  { id: 'alerts', label: 'Alerts', icon: Bell, badge: 3 },
-  { id: 'reports', label: 'Reports', icon: BarChart3 },
-  { id: 'settings', label: 'Settings', icon: Settings },
+  { id: 'dashboard',  label: 'Dashboard',   icon: LayoutDashboard },
+  { id: 'insurance',  label: 'My Insurance', icon: Shield },
+  { id: 'claims',     label: 'Claims',       icon: FileText, badge: 2 },
+  { id: 'history',    label: 'History',      icon: History },
+  { id: 'payments',   label: 'Payments',     icon: CreditCard },
+  { id: 'risk',       label: 'Risk Monitor', icon: Activity },
+  { id: 'calculator', label: 'Recommend',    icon: Sparkles },
+  { id: 'alerts',     label: 'Alerts',       icon: Bell, badge: 3 },
+  { id: 'reports',    label: 'Reports',      icon: BarChart3 },
+  { id: 'settings',   label: 'Settings',     icon: Settings },
 ]
 
 interface SidebarProps {
   activePage: string
   onNavigate: (page: string) => void
   isAdmin: boolean
+  userName?: string
+  userPlan?: string
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, isAdmin }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, isAdmin, userName, userPlan }) => {
   const [collapsed, setCollapsed] = useState(false)
 
   return (
@@ -156,13 +160,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, isAdmin }) =>
           style={{ justifyContent: collapsed ? 'center' : 'flex-start' }}
         >
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center flex-shrink-0">
-            <User size={14} className="text-white" />
+            <span className="text-white text-xs font-bold">{userName ? userName.charAt(0).toUpperCase() : 'U'}</span>
           </div>
           <AnimatePresence>
             {!collapsed && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-w-0">
-                <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>Rahul Sharma</p>
-                <p className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>Gold Plan • Active</p>
+                <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{userName || 'Worker'}</p>
+                <p className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>{userPlan ? `${userPlan} · Active` : 'No active plan'}</p>
               </motion.div>
             )}
           </AnimatePresence>

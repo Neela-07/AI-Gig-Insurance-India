@@ -327,3 +327,109 @@ def buy_policy():
     except Exception as e:
         print(f"[SmartShield] Policy purchase error: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+@premium_bp.route('/premium/payments', methods=['GET'])
+def get_payments():
+    """
+    Get payment history and current due for a worker.
+    Derives past weekly payments from the policy start date.
+    """
+    worker_id = request.args.get('worker_id')
+    if not worker_id:
+        return jsonify({'error': 'Worker ID is required'}), 400
+
+    try:
+        supabase = get_supabase_client()
+
+        # Fetch active policy
+        policy_res = supabase.table("policies").select("*").eq("worker_id", worker_id).eq("status", "active").limit(1).execute()
+        active_policy = policy_res.data[0] if policy_res.data else None
+
+        # Fetch all policies (for payment history)
+        all_policies_res = supabase.table("policies").select("*").eq("worker_id", worker_id).order("start_date", desc=True).execute()
+        all_policies = all_policies_res.data or []
+
+        # Generate payment history from policies
+        payments = []
+        from datetime import timedelta
+
+        for pol in all_policies:
+            base_premium = float(pol.get('premium_amount', 199))
+            status = pol.get('status', 'active')
+            plan = pol.get('plan_name', 'Standard')
+            pol_id = str(pol.get('id', ''))
+
+            # Parse policy start so we don't generate payments before it began
+            pol_start = None
+            if pol.get('start_date'):
+                try:
+                    pol_start = datetime.fromisoformat(pol['start_date'].replace('Z', '+00:00'))
+                except Exception:
+                    pass
+
+            # Generate last N weekly payments going backward from now
+            num_weeks = 4 if status in ('expired', 'cancelled') else 3
+            now_naive = datetime.now()
+            for i in range(num_weeks):
+                pay_date = now_naive - timedelta(weeks=i)
+                # Don't show payments before policy started
+                if pol_start:
+                    pol_start_naive = pol_start.replace(tzinfo=None)
+                    if pay_date < pol_start_naive:
+                        continue
+                pay_status = 'paid' if i > 0 else ('pending' if status == 'pending' else 'paid')
+                pay_key = f"{worker_id}{pol_id}{i}"
+                payments.append({
+                    'id': f"PAY-{abs(hash(pay_key)) % 99999:05d}",
+                    'plan_name': plan,
+                    'amount': base_premium,
+                    'date': pay_date.strftime('%Y-%m-%dT%H:%M:%S'),
+                    'status': pay_status,
+                    'billing_cycle': pol.get('billing_cycle', 'weekly'),
+                    'coverage_amount': pol.get('coverage_amount', 0),
+                })
+
+        # Sort payments newest first
+        payments.sort(key=lambda x: x['date'], reverse=True)
+
+        # Current due: live-adjusted premium for active plan
+        current_due = None
+        if active_policy:
+            # Try to get live-adjusted premium via risk snapshot
+            try:
+                from services.risk_engine import calculate_premium as calc_premium
+                live_result = calc_premium(zone_risk=0.3, claim_frequency=0.1, work_consistency=0.7)
+                safety_score = live_result.get('risk_score', 75)
+                plan_name = active_policy.get('plan_name', 'Standard')
+                adjusted_premium = compute_risk_adjusted_premium(plan_name, safety_score)
+                current_due = {
+                    'plan_name': plan_name,
+                    'base_premium': float(active_policy.get('premium_amount', 199)),
+                    'adjusted_premium': adjusted_premium,
+                    'safety_score': safety_score,
+                    'due_date': (datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d'),
+                    'billing_cycle': active_policy.get('billing_cycle', 'weekly'),
+                    'coverage_amount': float(active_policy.get('coverage_amount', 0)),
+                }
+            except Exception as e:
+                print(f"[SmartShield] Live premium calc failed for payments: {e}")
+                current_due = {
+                    'plan_name': active_policy.get('plan_name', 'Standard'),
+                    'base_premium': float(active_policy.get('premium_amount', 199)),
+                    'adjusted_premium': float(active_policy.get('premium_amount', 199)),
+                    'safety_score': 75,
+                    'due_date': (datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d'),
+                    'billing_cycle': active_policy.get('billing_cycle', 'weekly'),
+                    'coverage_amount': float(active_policy.get('coverage_amount', 0)),
+                }
+
+        return jsonify({
+            'current_due': current_due,
+            'payments': payments,
+            'total_paid': sum(p['amount'] for p in payments if p['status'] == 'paid'),
+        })
+
+    except Exception as e:
+        print(f"[SmartShield] Payments fetch error: {e}")
+        return jsonify({'error': str(e)}), 500

@@ -316,17 +316,22 @@ const MyInsurance: React.FC = () => {
   const intervalRef   = useRef<ReturnType<typeof setInterval> | null>(null)
   const watchCleanup  = useRef<(() => void) | null>(null)   // GPS watchPosition cleanup
   const locationRef   = useRef<UserLocation | null>(null)   // always up-to-date for callbacks
+  const policyPlanRef = useRef<string | undefined>(undefined) // track plan name without re-render
   const user = authService.getCurrentUser()
 
   /* Fetch everything */
   const fetchAll = useCallback(async (silent = false, loc?: UserLocation) => {
-    if (!user) return
+    if (!user) {
+      setLoading(false)
+      return
+    }
     const useLoc = loc ?? locationRef.current ?? DEFAULT_LOCATION
     if (!silent) setLoading(true)
     else setRefreshing(true)
 
     try {
-      const activePlanName = policy?.plan_name as string | undefined
+      // Use ref to avoid adding policy to deps (prevents re-render loop)
+      const activePlanName = policyPlanRef.current
       const [policyRes, snapshotRes, claimsRes] = await Promise.allSettled([
         getPolicy(user.id),
         getRiskSnapshot(user.id, {
@@ -338,7 +343,11 @@ const MyInsurance: React.FC = () => {
         getClaims(user.id),
       ])
 
-      if (policyRes.status === 'fulfilled') setPolicy(policyRes.value.data.policy)
+      if (policyRes.status === 'fulfilled') {
+        const p = policyRes.value.data.policy
+        setPolicy(p)
+        policyPlanRef.current = p?.plan_name
+      }
       if (snapshotRes.status === 'fulfilled') {
         setSnapshot(snapshotRes.value.data)
         setLastUpdated(new Date())
@@ -350,7 +359,7 @@ const MyInsurance: React.FC = () => {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [user?.id, policy?.plan_name])
+  }, [user?.id])
 
   /* Start real-time GPS watch */
   const startWatch = useCallback(() => {

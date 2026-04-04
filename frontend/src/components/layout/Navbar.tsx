@@ -4,17 +4,19 @@ import { Bell, Sun, Moon, Search } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 
 const pageTitles: Record<string, { title: string; subtitle: string }> = {
-  dashboard: { title: 'Dashboard', subtitle: 'Welcome back, Rahul 👋' },
-  insurance: { title: 'My Insurance', subtitle: 'Manage your active policies' },
-  claims: { title: 'Claims History', subtitle: 'Track all your claims' },
-  risk: { title: 'Risk Monitor', subtitle: 'Live environmental tracking' },
-  calculator: { title: 'AI Insurance Recommendation', subtitle: 'Personalized plans based on your live risk score' },
-  alerts: { title: 'Alerts', subtitle: 'Real-time notifications' },
-  reports: { title: 'Reports', subtitle: 'Analytics & insights' },
-  settings: { title: 'Settings', subtitle: 'Customize your experience' },
-  admin: { title: 'Admin Dashboard', subtitle: 'Platform-wide analytics' },
-  fraud: { title: 'Fraud Analysis', subtitle: 'ML-powered fraud detection' },
-  payout: { title: 'Payout Simulator', subtitle: 'Simulate instant payouts' },
+  dashboard:  { title: 'Dashboard',                  subtitle: 'Welcome back 👋' },
+  insurance:  { title: 'My Insurance',               subtitle: 'Manage your active policies' },
+  claims:     { title: 'Claims',                     subtitle: 'Submit and track claims' },
+  history:    { title: 'Claims History',             subtitle: 'All previous claims and their status' },
+  payments:   { title: 'Payments',                   subtitle: 'Premium dues and payment history' },
+  risk:       { title: 'Risk Monitor',               subtitle: 'Live environmental tracking' },
+  calculator: { title: 'AI Insurance Recommendation',subtitle: 'Personalized plans based on your live risk score' },
+  alerts:     { title: 'Alerts',                     subtitle: 'Real-time notifications' },
+  reports:    { title: 'Reports',                    subtitle: 'Analytics & insights' },
+  settings:   { title: 'Settings & Profile',         subtitle: 'Manage your account and preferences' },
+  admin:      { title: 'Admin Dashboard',            subtitle: 'Platform-wide analytics' },
+  fraud:      { title: 'Fraud Analysis',             subtitle: 'ML-powered fraud detection' },
+  payout:     { title: 'Payout Simulator',           subtitle: 'Simulate instant payouts' },
 }
 
 interface NavbarProps {
